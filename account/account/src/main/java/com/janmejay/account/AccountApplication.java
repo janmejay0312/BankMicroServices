@@ -5,10 +5,18 @@ import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
+//DockerTest@12
 
 @SpringBootApplication
 @EnableJpaAuditing(auditorAwareRef = "auditAwareImpl")
+@EnableAspectJAutoProxy
+@EnableDiscoveryClient
+@EnableFeignClients
 @OpenAPIDefinition(info = @Info(
 		title = "Account MicroService REST API Documentation",
 		description = "Account MicroService REST API Documentation",

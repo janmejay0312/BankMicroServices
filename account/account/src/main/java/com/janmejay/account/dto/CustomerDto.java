@@ -24,7 +24,7 @@ public class CustomerDto {
     @Schema(
             description = "Email of the customer", example = "Test@gmail.com"
     )
-    @NotEmpty(message ="name can not be null or empty value")
+    @NotEmpty(message ="Email can not be null or empty value")
     @Email(message = "Email should be a valid value")
     private String email;
 

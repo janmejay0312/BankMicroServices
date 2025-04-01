@@ -1,6 +1,7 @@
 package com.janmejay.account.service.impl;
 
 import com.janmejay.account.constants.AccountsConstants;
+import com.janmejay.account.dto.AccountMsgDto;
 import com.janmejay.account.dto.AccountsDto;
 import com.janmejay.account.dto.CustomerDto;
 import com.janmejay.account.entity.Account;
@@ -14,7 +15,11 @@ import com.janmejay.account.mapper.CustomerMapper;
 import com.janmejay.account.repository.AccountRepository;
 import com.janmejay.account.repository.CustomerRepository;
 import com.janmejay.account.service.IAccountService;
+import org.slf4j.Logger;
+
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,11 +29,15 @@ import java.util.Random;
 @Service
 public class AccountServiceImpl implements IAccountService {
 
+    private  static  final Logger logger = LoggerFactory.getLogger(AccountServiceImpl.class);
     @Autowired
     CustomerRepository customerRepository;
 
     @Autowired
     AccountRepository accountRepository;
+
+    @Autowired
+    StreamBridge streamBridge;
 
 
     @Override
@@ -47,8 +56,17 @@ public class AccountServiceImpl implements IAccountService {
         Customer savedCustomer = customerRepository.save(customer);
         Account account = createAccount(customer);
         accountRepository.save(account);
-
+        sendCommunication(savedCustomer, account);
 return customer;
+    }
+
+    private void sendCommunication(Customer savedCustomer, Account account) {
+
+        var accountsMsgDto = new AccountMsgDto(account.getAccountNo(), savedCustomer.getName(),savedCustomer.getEmail(),
+                savedCustomer.getMobileNumber());
+        logger.info("sending Communication request for details:{}", accountsMsgDto);
+        var result = streamBridge.send("sendCommunication-out-0", accountsMsgDto);
+        logger.info("Is the communication request successfully triggered?:{}", result);
     }
 
     private Account createAccount(Customer customer){
@@ -138,4 +156,23 @@ return customer;
 
         return true;
     }
+
+    @Override
+    public boolean updateCommunicationSw(Long accountNumber) {
+
+        boolean isUpdated = false;
+
+        if(accountNumber!=null)
+        {
+            Account account = accountRepository.findById(accountNumber).orElseThrow(()->new
+                    ResourceNotFoundException("Account","AccountNumber",accountNumber.toString()));
+
+            account.setCommunicationSw(true);
+            accountRepository.save(account);
+            isUpdated = true;
+        }
+
+        return isUpdated;
+    }
+
 }

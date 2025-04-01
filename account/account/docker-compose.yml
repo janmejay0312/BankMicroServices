@@ -1,0 +1,184 @@
+version: '3.8'
+services:
+  accountsDB:
+    image: mysql
+    container_name: accountsDB
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bank
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test
+
+  loansDB:
+    image: mysql
+    container_name: loansDB
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: loans
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test
+
+  cardsDB:
+    image: mysql
+    container_name: cardsDB
+    ports:
+      - "3309:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: card
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test
+
+  account:
+    image: "test0312/account:s11"
+    container_name: account
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:8082/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    environment:
+      SPRING_APPLICATION_NAME: "account"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://accountsDB:3306/bank"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_PROFILES_ACTIVE: default
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      accountsDB:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - test
+
+  loan:
+    image: "test0312/loans:s11"
+    container_name: loan_ms
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:8090/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    environment:
+      SPRING_APPLICATION_NAME: "loan"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://loansDB:3306/loans"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_PROFILES_ACTIVE: default
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      loansDB:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - test
+
+  card:
+    image: "test0312/cards:s11"
+    container_name: card_ms
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:9000/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    environment:
+      SPRING_APPLICATION_NAME: "card"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://cardsDB:3306/card"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_PROFILES_ACTIVE: default
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      cardsDB:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - test
+  apigateway:
+    image: "test0312/apigateway:s11"
+    container_name: apigateway_ms
+    ports:
+      - "8072:8072"
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+      account:
+        condition: service_healthy
+      loan:
+        condition: service_healthy
+      card:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - test
+  eurekaserver:
+    image: "test0312/eurekaserver:s11"
+    container_name: eurekaserver_ms
+    ports:
+      - "8070:8070"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8070/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - test
+networks:
+  test:
+    driver: bridge

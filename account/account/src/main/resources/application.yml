@@ -1,0 +1,104 @@
+spring:
+  application:
+    name: account
+  datasource:
+    url: jdbc:mysql://localhost:3306/bank
+    username: root
+    password: Root@123
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: update
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+    function:
+      definition: updateCommunication
+    stream:
+      bindings:
+        sendCommunication-out-0:
+          destination: send-communication
+        updateCommunication-in-0:
+          destination: communication-sent
+          group: ${spring.application.name}
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    connection-timeout: 10s
+
+server:
+  port: 8082
+
+eureka:
+  instance:
+    preferIpAddress: true
+    lease-expiration-duration-in-seconds: 5
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+    healthcheck:
+      enabled: true
+    enableSelfPreservation: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveliness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+    shutdown:
+      access: unrestricted
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: "account"
+    description: "Bank account application"
+    version: "1.0.0"
+
+logging:
+  level:
+    com.janmejay.account: DEBUG
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 2
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 100ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        ignoreExceptions:
+          - java.lang.NullPointerException
+        retryExceptions:
+          - java.util.concurrent.TimeoutException
+  ratelimiter:
+    configs:
+      default:
+        timeoutDuration: 1000
+        limitRefreshPeriod: 5000
+        limitForPeriod: 1

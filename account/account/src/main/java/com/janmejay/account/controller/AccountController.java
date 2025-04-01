@@ -6,6 +6,8 @@ import com.janmejay.account.dto.ErrorResponseDto;
 import com.janmejay.account.dto.ResponseDto;
 import com.janmejay.account.entity.Customer;
 import com.janmejay.account.service.IAccountService;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -17,24 +19,36 @@ import io.swagger.v3.oas.annotations.tags.Tags;
 import jakarta.persistence.Table;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.concurrent.TimeoutException;
+
 @Tag(
         name = "Crud REST APIs for Account in a Bank",
         description = "Crud REST APIs for Account in a Bank to create, update, fetch and delete account details"
 )
 @RestController
-@RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api/account", produces = MediaType.APPLICATION_JSON_VALUE)
 @Validated
 public class AccountController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AccountController.class);
+
     @Autowired
     IAccountService iAccountService;
+
+    String buildVersion = "9.0";
+
+    @Autowired
+    Environment environment;
 
     @Operation(
             summary = "Create Rest API",
@@ -123,4 +137,25 @@ public class AccountController {
 
       return  responseDto;
   }
+    @Retry(name="getBuildInfo",fallbackMethod="getBuildInfoFallback")
+    @GetMapping("/build-info")
+   public ResponseEntity<String> getBuildInfo() throws TimeoutException {
+        logger.debug("getBuildInfo() invoked");
+//        throw new TimeoutException();
+        return ResponseEntity.status(HttpStatus.OK).body(buildVersion);
+   }
+
+    public ResponseEntity<String> getBuildInfoFallback(Throwable throwable){
+        logger.debug("getBuildInfoFallback() invoked");
+        return ResponseEntity.status(HttpStatus.OK).body("1.0");
+    }
+
+    @RateLimiter(name="getJavaVersion", fallbackMethod = "getJavaVersionFallback")
+    @GetMapping("/java-version")
+    public ResponseEntity<String> getJavaVersion(){
+        return ResponseEntity.status(HttpStatus.OK).body(environment.getProperty("JAVA_HOME"));
+    }
+    public ResponseEntity<String> getJavaVersionFallback(Throwable throwable){
+        return ResponseEntity.status(HttpStatus.OK).body("java 17");
+    }
 }

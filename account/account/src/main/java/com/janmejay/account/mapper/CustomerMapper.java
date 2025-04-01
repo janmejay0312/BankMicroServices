@@ -1,6 +1,7 @@
 package com.janmejay.account.mapper;
 
 import com.janmejay.account.dto.AccountsDto;
+import com.janmejay.account.dto.CustomerDetailDto;
 import com.janmejay.account.dto.CustomerDto;
 import com.janmejay.account.entity.Account;
 import com.janmejay.account.entity.Customer;
@@ -21,5 +22,12 @@ public class CustomerMapper {
         customer.setEmail(customerDto.getEmail());
         customer.setMobileNumber(customerDto.getMobileNumber());
         return customer;
+    }
+
+    public  static CustomerDetailDto mapToCustomerDetailDto(Customer customer, CustomerDetailDto customerDetailDto){
+        customerDetailDto.setName(customer.getName());
+        customerDetailDto.setEmail(customer.getEmail());
+        customerDetailDto.setMobileNumber(customer.getMobileNumber());
+        return customerDetailDto;
     }
 }
